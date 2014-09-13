@@ -1,13 +1,16 @@
 module Spree
   class PaypalController < StoreController
+    ssl_allowed
+
     def express
       order = current_order || raise(ActiveRecord::RecordNotFound)
       items = order.line_items.map(&method(:line_item))
 
-      tax_adjustments = order.all_adjustments.tax.additional
-      shipping_adjustments = order.all_adjustments.shipping
+      additional_adjustments = order.all_adjustments.additional
+      tax_adjustments = additional_adjustments.tax
+      shipping_adjustments = additional_adjustments.shipping
 
-      order.all_adjustments.eligible.each do |adjustment|
+      additional_adjustments.eligible.each do |adjustment|
         next if (tax_adjustments + shipping_adjustments).include?(adjustment)
         items << {
           :Name => adjustment.label,
@@ -92,6 +95,7 @@ module Spree
           :SolutionType => payment_method.preferred_solution.present? ? payment_method.preferred_solution : "Mark",
           :LandingPage => payment_method.preferred_landing_page.present? ? payment_method.preferred_landing_page : "Billing",
           :cppheaderimage => payment_method.preferred_logourl.present? ? payment_method.preferred_logourl : "",
+          :NoShipping => 1,
           :PaymentDetails => [payment_details(items)]
       }}
     end
